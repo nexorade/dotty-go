@@ -1,11 +1,29 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"net/http"
+	"nexorade/dotty-go/internal/veloce"
 )
 
 func main (){
-	env := os.Getenv("ENV")
-	fmt.Printf("Hello world: %s", env)
+
+	app := veloce.New()
+
+	app.Handle("GET","/", func(w http.ResponseWriter, r *http.Request) {
+		print("Hello")
+	})
+
+	adminRouter := veloce.NewRouter()
+
+	adminRouter.Handle("GET","/hello", func(w http.ResponseWriter, r *http.Request) {
+		print("Printing from something")
+	})
+
+	app.Route("/admin", *adminRouter)
+
+	err := app.Serve(":8080")
+
+	if err != nil {
+		panic(err)
+	}
 }
