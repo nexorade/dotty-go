@@ -35,3 +35,22 @@ func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (A
 	)
 	return i, err
 }
+
+const createUserPreferences = `-- name: CreateUserPreferences :one
+INSERT INTO preferences ("user_id") VALUES ($1) RETURNING id, user_id, dark_mode, codespace_theme, created_at, updated_at, deleted_at
+`
+
+func (q *Queries) CreateUserPreferences(ctx context.Context, userID int32) (Preference, error) {
+	row := q.db.QueryRow(ctx, createUserPreferences, userID)
+	var i Preference
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.DarkMode,
+		&i.CodespaceTheme,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
