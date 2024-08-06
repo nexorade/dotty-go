@@ -12,7 +12,9 @@ services:
       - "8080:8080"
     env_file:
       - .env.dev
-
+    depends_on:
+      database:
+        condition: service_healthy
 
   database:
     image: postgres:14-alpine
@@ -22,15 +24,12 @@ services:
       - database_data:/var/lib/postgresql/data
     env_file:
       - .env.dev
-  adminer:
-    image: adminer:latest
-    container_name: adminer
-    environment:
-      ADMINER_DEFAULT_SERVER: db:5432
-      ADMINER_DESIGN: dracula
-    restart: always
-    ports:
-      - 7777:8080
+    healthcheck:
+      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      interval: 10s
+      timeout: 3s
+      retries: 3
+  
 volumes:
   repository_storage:
   database_data:
