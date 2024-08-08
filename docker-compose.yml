@@ -1,21 +1,4 @@
 services:
-  dottie-go:
-    container_name: dotty-go-container
-    image: dottie-go
-    build:
-      context: .
-      dockerfile: ./.docker/Dockerfile.dev
-    volumes:
-      - ./:/app
-      - repository_storage:/repository_storage
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env.dev
-    depends_on:
-      database:
-        condition: service_healthy
-
   database:
     image: postgres:14-alpine
     ports:
@@ -23,13 +6,7 @@ services:
     volumes:
       - database_data:/var/lib/postgresql/data
     env_file:
-      - .env.dev
-    healthcheck:
-      test: pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
-      interval: 10s
-      timeout: 3s
-      retries: 3
+      - .env
   
 volumes:
-  repository_storage:
   database_data:
