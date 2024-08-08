@@ -1,0 +1,29 @@
+version: '3'
+
+
+dotenv: ['.env']
+tasks:
+  run:
+    desc: Run the application in dev environment
+    watch: true
+    sources:
+      - '**/*.go'
+    cmds:
+      - go run .
+  dx-up:
+    desc: Start dependency docker containers.
+    cmds:
+      - docker compose up --build -d
+    summary: |
+      Run docker containers
+
+      This command runs docker container that the application needs for local development.
+      Make sure that you have copied the .env.example file to a .env file in project's root.
+  dx-down:
+    desc: Stop dependent docker containers.
+    cmds:
+      - docker compose down
+  gen-query:
+    desc: Generate golang compatible queries and structs for SQL queries.
+    cmds:
+      - sqlc generate
