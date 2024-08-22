@@ -54,3 +54,37 @@ func (q *Queries) CreateUserPreferences(ctx context.Context, userID int32) (Pref
 	)
 	return i, err
 }
+
+const getUserByEmail = `-- name: GetUserByEmail :many
+SELECT id, name, email, password, photo_url, email_verified, created_at, updated_at, deleted_at FROM app_user WHERE email=$1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) ([]AppUser, error) {
+	rows, err := q.db.Query(ctx, getUserByEmail, email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AppUser
+	for rows.Next() {
+		var i AppUser
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.Password,
+			&i.PhotoUrl,
+			&i.EmailVerified,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

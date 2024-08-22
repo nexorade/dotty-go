@@ -21,3 +21,8 @@ func Init(connString string)error{
 func Connection()*pgxpool.Pool{
 	return connection
 }
+
+
+func DBQueries()*Queries{
+	return New(connection)
+}
