@@ -10,23 +10,22 @@ import (
 )
 
 const createAppUser = `-- name: CreateAppUser :one
-INSERT INTO app_user ("name", "email", "password") VALUES ($1, $2, $3) RETURNING  id, name, email, password, photo_url, email_verified, created_at, updated_at, deleted_at
+INSERT INTO app_user (name, email, email_verified) VALUES ($1, $2, $3) RETURNING id, name, email, photo_url, email_verified, created_at, updated_at, deleted_at
 `
 
 type CreateAppUserParams struct {
-	Name     string
-	Email    string
-	Password string
+	Name          string
+	Email         string
+	EmailVerified bool
 }
 
 func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (AppUser, error) {
-	row := q.db.QueryRow(ctx, createAppUser, arg.Name, arg.Email, arg.Password)
+	row := q.db.QueryRow(ctx, createAppUser, arg.Name, arg.Email, arg.EmailVerified)
 	var i AppUser
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
-		&i.Password,
 		&i.PhotoUrl,
 		&i.EmailVerified,
 		&i.CreatedAt,
@@ -36,21 +35,93 @@ func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (A
 	return i, err
 }
 
-const createUserPreferences = `-- name: CreateUserPreferences :one
-INSERT INTO preferences ("user_id") VALUES ($1) RETURNING id, user_id, dark_mode, codespace_theme, created_at, updated_at, deleted_at
+const getAppUserByEmail = `-- name: GetAppUserByEmail :one
+SELECT id, name, email, photo_url, email_verified, created_at, updated_at, deleted_at FROM app_user WHERE email=$1 AND deleted_at IS  NULL
 `
 
-func (q *Queries) CreateUserPreferences(ctx context.Context, userID int32) (Preference, error) {
-	row := q.db.QueryRow(ctx, createUserPreferences, userID)
-	var i Preference
+func (q *Queries) GetAppUserByEmail(ctx context.Context, email string) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getAppUserByEmail, email)
+	var i AppUser
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.DarkMode,
-		&i.CodespaceTheme,
+		&i.Name,
+		&i.Email,
+		&i.PhotoUrl,
+		&i.EmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const getAppUserByID = `-- name: GetAppUserByID :one
+SELECT id, name, email, photo_url, email_verified, created_at, updated_at, deleted_at FROM app_user WHERE id=$1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetAppUserByID(ctx context.Context, id int32) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getAppUserByID, id)
+	var i AppUser
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.PhotoUrl,
+		&i.EmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const softDeleteAppUser = `-- name: SoftDeleteAppUser :exec
+UPDATE app_user SET deleted_at=CURRENT_TIMESTAMP WHERE id=$1
+`
+
+func (q *Queries) SoftDeleteAppUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteAppUser, id)
+	return err
+}
+
+const updateAppUserEmail = `-- name: UpdateAppUserEmail :exec
+UPDATE app_user SET email=$1 WHERE id=$2 AND deleted_at IS  NULL
+`
+
+type UpdateAppUserEmailParams struct {
+	Email string
+	ID    int32
+}
+
+func (q *Queries) UpdateAppUserEmail(ctx context.Context, arg UpdateAppUserEmailParams) error {
+	_, err := q.db.Exec(ctx, updateAppUserEmail, arg.Email, arg.ID)
+	return err
+}
+
+const updateAppUserName = `-- name: UpdateAppUserName :exec
+UPDATE app_user SET name=$1 WHERE id=$2 AND deleted_at IS  NULL
+`
+
+type UpdateAppUserNameParams struct {
+	Name string
+	ID   int32
+}
+
+func (q *Queries) UpdateAppUserName(ctx context.Context, arg UpdateAppUserNameParams) error {
+	_, err := q.db.Exec(ctx, updateAppUserName, arg.Name, arg.ID)
+	return err
+}
+
+const updateAppUserPhotoURL = `-- name: UpdateAppUserPhotoURL :exec
+UPDATE app_user SET photo_url=$1 WHERE id=$2 AND deleted_at IS  NULL
+`
+
+type UpdateAppUserPhotoURLParams struct {
+	PhotoUrl string
+	ID       int32
+}
+
+func (q *Queries) UpdateAppUserPhotoURL(ctx context.Context, arg UpdateAppUserPhotoURLParams) error {
+	_, err := q.db.Exec(ctx, updateAppUserPhotoURL, arg.PhotoUrl, arg.ID)
+	return err
 }

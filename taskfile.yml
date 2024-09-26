@@ -5,11 +5,8 @@ dotenv: ['.env']
 tasks:
   run:
     desc: Run the application in dev environment
-    watch: true
-    sources:
-      - '**/*.go'
     cmds:
-      - go run .
+      - fiber dev
   dx-up:
     desc: Start dependency docker containers.
     cmds:

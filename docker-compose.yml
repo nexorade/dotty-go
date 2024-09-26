@@ -7,6 +7,16 @@ services:
       - database_data:/var/lib/postgresql/data
     env_file:
       - .env
-  
+  redis:
+    image: redis:7.4.0
+    restart: always
+    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASSWORD"
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/var/lib/redis/data
+    env_file:
+      - .env
 volumes:
   database_data:
+  redis_data:

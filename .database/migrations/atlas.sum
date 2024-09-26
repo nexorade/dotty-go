@@ -1,2 +1,8 @@
-h1:vRGUYtsTXYPY5XuDgtYo581VN6LNk/9/D03Mh+I549k=
+h1:FFvnqTijKy3wsNCculhv49/KK7V55nXRbNXRFbom1F8=
 20240805155305_create_initial_tables.sql h1:SSm3xJg82vFqN9tCpBsWEBLsfm8ITsBJDsaQgo8g5QE=
+20240822133130_add-register-otp.sql h1:OhKsJBR5IuMDe7BvVkQ2nzayKYAQ3Ia+vz3YMZpZDZc=
+20240826115119_added_client_ip.sql h1:EJ3wxKmk69p4P2X1/sRIVRE64pgC1Fb5p3xuvy4Lzio=
+20240826115201_updated_table_name_for_registration_otp.sql h1:tVOvIAvDXqhqRxx8BRh4MTalwRXocmfwlazy2juE/s8=
+20240828052809_removed_password_from_user_table.sql h1:f50MpdnOyjNkp2nSv1Osa+wRZE/3/ItcxT+VBZR0eM8=
+20240902133349_added_user_signin_otp_table.sql h1:YBLVDuJjqk3egKogVYkJs46qSGM+P7SEG2Zp7CinuLk=
+20240905085014_removed_tokens_and_otp.sql h1:JL0IkwJnP4hc+3NAT1ynxNHKM0NPXG3P+/lL/hiwIz0=

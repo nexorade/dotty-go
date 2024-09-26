@@ -12,7 +12,6 @@ type AppUser struct {
 	ID            int32
 	Name          string
 	Email         string
-	Password      string
 	PhotoUrl      string
 	EmailVerified bool
 	CreatedAt     pgtype.Timestamptz
@@ -48,15 +47,4 @@ type Preference struct {
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
 	DeletedAt      pgtype.Timestamptz
-}
-
-type RefreshToken struct {
-	ID        int32
-	UserID    int32
-	Token     string
-	ClientIp  string
-	ExpiresAt pgtype.Timestamptz
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	DeletedAt pgtype.Timestamptz
 }

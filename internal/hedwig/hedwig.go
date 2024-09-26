@@ -22,9 +22,9 @@ const (
 
 var orchestrator *Orchestrator
 
-func GetOrchestrator() *Orchestrator {
+func InitialiseOrchestrator() {
 	if orchestrator != nil {
-		return orchestrator
+		panic("Orchestrator can be initialised only once")
 	}
 	ch := make(chan gomail.Message, BUFFER)
 	conf := dialerConfig{
@@ -44,6 +44,13 @@ func GetOrchestrator() *Orchestrator {
 	}
 	orchestrator = &newo
 	go orchestrate(orchestrator)
+
+}
+
+func GetOrchestrator() *Orchestrator {
+	if orchestrator == nil {
+		panic("Uninitialised orchaestrator")
+	}
 	return orchestrator
 }
 
@@ -66,7 +73,7 @@ func CloseOrchastrator() {
 	orchestrator = &Orchestrator{}
 }
 
-func (o *Orchestrator) SendOTP(to string, otp string) {
+func (o *Orchestrator) SendOTP(to string, otp string) bool {
 	m := gomail.NewMessage()
 	m.SetHeader("From", "noreply@nexorade.com")
 	m.SetHeader("To", to)
@@ -74,4 +81,5 @@ func (o *Orchestrator) SendOTP(to string, otp string) {
 	m.SetBody("text/plain", "Your OTP: "+otp)
 
 	o.queue <- *m
+	return true
 }
