@@ -24,3 +24,23 @@ func ValidateBody[T any](ctx *fiber.Ctx) (*T, error) {
 
 	return body, nil
 }
+
+func ValidateQueryParams[T any](ctx *fiber.Ctx) (*T, error) {
+	body := new(T)
+
+	parseErr := ctx.QueryParser(body)
+
+	if parseErr != nil {
+		return nil, parseErr
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+
+	validateErr := validate.Struct(body)
+
+	if validateErr != nil {
+		return nil, validateErr
+	}
+
+	return body, nil
+}

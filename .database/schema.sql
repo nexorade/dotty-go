@@ -1,8 +1,9 @@
 -- Create "app_user" table
 CREATE TABLE app_user (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
     photo_url VARCHAR(255) NOT NULL DEFAULT 'https://robohash.org/71d2d83d09151874f9bdfecc0da05d6a?set=set4&bgset=&size=400x400',
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -10,6 +11,19 @@ CREATE TABLE app_user (
     deleted_at TIMESTAMPTZ DEFAULT NULL
 );
 
+-- Create "refresh_token" table
+CREATE TABLE refresh_token (
+	id SERIAL PRIMARY KEY,
+	user_id INTEGER NOT NULL,
+	token VARCHAR(255) NOT NULL UNIQUE,
+	user_ip VARCHAR(255) NOT NULL,    
+	expired BOOLEAN NOT NULL DEFAULT FALSE,
+	expires_at TIMESTAMPTZ NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    	updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    	deleted_at TIMESTAMPTZ DEFAULT NULL,
+	FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+);
 
 -- Create "preferences" table
 CREATE TABLE preferences (

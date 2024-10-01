@@ -10,16 +10,16 @@ import (
 var SIGNING_KEY = []byte("WHATEVER")
 
 type Claim struct {
-	UserID int32  `json:"userId"`
-	Name   string `json:"name"`
-	Email  string `json:"email"`
+	UserID   int32  `json:"userId"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
 func Sign(claim *Claim) (string, error) {
 
 	t := go_jwt.NewWithClaims(go_jwt.SigningMethodHS256, go_jwt.MapClaims{
 		"userId": claim.UserID,
-		"name":   claim.Name,
+		"name":   claim.Username,
 		"email":  claim.Email,
 		"exp":    time.Now().Add(time.Minute * 10),
 		"iat":    time.Now(),

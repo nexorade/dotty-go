@@ -1,4 +1,4 @@
-h1:FFvnqTijKy3wsNCculhv49/KK7V55nXRbNXRFbom1F8=
+h1:N2OlrTkiUzAUndzqfwCR7M676cV27HqBL+MOiR1COzA=
 20240805155305_create_initial_tables.sql h1:SSm3xJg82vFqN9tCpBsWEBLsfm8ITsBJDsaQgo8g5QE=
 20240822133130_add-register-otp.sql h1:OhKsJBR5IuMDe7BvVkQ2nzayKYAQ3Ia+vz3YMZpZDZc=
 20240826115119_added_client_ip.sql h1:EJ3wxKmk69p4P2X1/sRIVRE64pgC1Fb5p3xuvy4Lzio=
@@ -6,3 +6,8 @@ h1:FFvnqTijKy3wsNCculhv49/KK7V55nXRbNXRFbom1F8=
 20240828052809_removed_password_from_user_table.sql h1:f50MpdnOyjNkp2nSv1Osa+wRZE/3/ItcxT+VBZR0eM8=
 20240902133349_added_user_signin_otp_table.sql h1:YBLVDuJjqk3egKogVYkJs46qSGM+P7SEG2Zp7CinuLk=
 20240905085014_removed_tokens_and_otp.sql h1:JL0IkwJnP4hc+3NAT1ynxNHKM0NPXG3P+/lL/hiwIz0=
+20241001090019_chaged.sql h1:+iJgmWWADp1h+snx6DjJaDX9cEX90VzNa3u9/M5eZsg=
+20241001091230_email_and_name_made_unique.sql h1:G8z31zJUJSjEKVVtAMPKtVjCjvfGf6N1jEXIYA+siDQ=
+20241001100315_added_password_to_app_user.sql h1:FYiZYOpZa2rfLBN7F2F8uV0Wpr3GAxtLbgbA8nSUkKI=
+20241001110613_added_refresh_token_table.sql h1:vtt3Y3nmocjEYYRTOyq6qL4ZDiZsTjXzFL+zOCH1WmA=
+20241001140654_added_expired_flag_to_refresh_token.sql h1:t6cmaIfKvErqgc8UJ5gA6fIVxvUsyFiliSSaaAzLIDM=

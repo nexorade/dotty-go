@@ -12,7 +12,6 @@ import (
 	"nexorade/dotty-go/api/types"
 	"nexorade/dotty-go/db"
 	"nexorade/dotty-go/internal/hedwig"
-	"nexorade/dotty-go/internal/keysto"
 	"os"
 )
 
@@ -34,15 +33,6 @@ func main() {
 
 	hedwig.InitialiseOrchestrator()
 	defer hedwig.CloseOrchastrator()
-	keystoAddr := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
-	keystoPass := os.Getenv("REDIS_PASSWORD")
-	keystoOpts := &keysto.InitOptions{
-		Addr:     keystoAddr,
-		Password: keystoPass,
-	}
-	keysto.Initialise(keystoOpts)
-	defer keysto.Clean()
-
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
@@ -71,16 +61,10 @@ func main() {
 	// V1 API Routes
 	v1 := app.Group("/api/v1")
 	v1.Route("/auth", func(router fiber.Router) {
-		router.Post("/register/send-otp", auth_handler.RegisterSendOTP).Name("register.send-otp")
-		router.Post("/register/resend-otp", auth_handler.RegisterResendOTP).Name("register.resend-otp")
-		router.Post("/register/verify-otp", auth_handler.RegisterVerifyOTP).Name("register.verify-otp")
-		router.Post("/signin/send-otp", auth_handler.SignInSendOTP).Name("signin.send-otp")
-		router.Post("/signin/resend-otp", auth_handler.SignInResendOTP).Name("signin.resend-otp")
-		router.Post("/signin/verify-otp", auth_handler.SignInVerifyOTP).Name("signin.verify-otp")
-		router.Post("/refresh", auth_handler.RefreshToken).Name("refresh")
+		router.Get("/username-exists", auth_handler.UsernameExists).Name("username-exists")
+		router.Post("/register", auth_handler.Register).Name("register")
+		router.Post("/signin", auth_handler.Signin).Name("signin")
+		router.Get("/refresh", auth_handler.Refresh).Name("refresh")
 	}, "auth.")
-	v1.Route("/repo", func(router fiber.Router) {
-
-	})
 	logger.Fatal(app.Listen(port))
 }

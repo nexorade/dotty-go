@@ -2,20 +2,18 @@ package auth_handler
 
 import (
 	"crypto/sha256"
-	"fmt"
 	"nexorade/dotty-go/api/types"
 	"nexorade/dotty-go/db"
 	"nexorade/dotty-go/internal/checkmate"
-	"nexorade/dotty-go/internal/hedwig"
-	"nexorade/dotty-go/internal/keysto"
-	"time"
-
 	"nexorade/dotty-go/internal/jwt"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/nanorand/nanorand"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -50,317 +48,145 @@ func generateRefreshToken() string {
 	return uuid.New().String()
 }
 
-func RegisterSendOTP(ctx *fiber.Ctx) error {
-	o := hedwig.GetOrchestrator()
-	k := keysto.GetClient()
+func UsernameExists(ctx *fiber.Ctx) error {
+
 	type RequestBody struct {
-		Email string `json:"email" validate:"required,email"`
+		Username string `json:"username" validate:"required"`
 	}
 
-	type ResponseBody struct {
-		Message string `json:"message"`
-	}
-
-	reqBody, validationErr := checkmate.ValidateBody[RequestBody](ctx)
+	params, validationErr := checkmate.ValidateQueryParams[RequestBody](ctx)
 
 	if validationErr != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Validation Error")
+		return fiber.NewError(fiber.StatusBadRequest, "Bad request")
 	}
+
 	queries := db.DBQueries()
 
-	whatever, userErr := queries.GetAppUserByEmail(ctx.Context(), reqBody.Email)
+	_, userErr := queries.GetAppUserByUsername(ctx.Context(), params.Username)
 
-	print(whatever.Name)
 	if userErr == nil {
-		message := fmt.Sprintf("User with Email ID: %s already exists", reqBody.Email)
-		return fiber.NewError(fiber.StatusConflict, message)
+		res := &types.Response[bool]{
+			Success: true,
+			Data:    true,
+		}
+
+		return ctx.JSON(res)
 	}
+
 	if userErr != pgx.ErrNoRows {
 		return fiber.NewError(fiber.StatusInternalServerError, "Internal Server Error")
 	}
-	key := generateHash(reqBody.Email, ctx.IP(), REGISTERATION_HASH_PREFIX)
-	storedOtp := new(OTPValue)
-	storedOtpErr := k.Get(ctx.Context(), key, storedOtp)
 
-	switch {
-	case storedOtpErr == nil:
-		message := fmt.Sprintf("OTP was already generated for Email ID: %s", reqBody.Email)
-		return fiber.NewError(fiber.StatusConflict, message)
-	case storedOtpErr != keysto.Nil:
-		return fiber.NewError(fiber.StatusInternalServerError, "Error fetching data from cache")
-	}
-
-	newOtp, newOtpErr := generateOTP()
-
-	if newOtpErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error generating OTP")
-	}
-	storedOtp.Otp = newOtp
-	setOtpErr := k.Set(ctx.Context(), key, storedOtp, time.Minute*5)
-
-	if setOtpErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error generating OTP")
-	}
-
-	o.SendOTP(reqBody.Email, storedOtp.Otp)
-
-	res := &types.Response[string]{
+	res := &types.Response[bool]{
 		Success: true,
-		Data:    "OTP sent successfully",
+		Data:    false,
 	}
 	return ctx.JSON(res)
 }
 
-func RegisterResendOTP(ctx *fiber.Ctx) error {
-	o := hedwig.GetOrchestrator()
-	k := keysto.GetClient()
+func Register(ctx *fiber.Ctx) error {
 	type RequestBody struct {
-		Email string `json:"email" validate:"required,email"`
+		Email    string `json:"email" validate:"required,email"`
+		Username string `json:"username" validate:"required"`
+		Password string `json:"password" validate:"required"`
 	}
 
-	type ResponseBody struct {
-		Message string `json:"message"`
-	}
-	reqBody, validationErr := checkmate.ValidateBody[RequestBody](ctx)
-
-	if validationErr != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Bad Request")
-	}
 	queries := db.DBQueries()
-
-	_, userErr := queries.GetAppUserByEmail(ctx.Context(), reqBody.Email)
-
-	if userErr == nil {
-		message := fmt.Sprintf("User with Email ID: %s already exists", reqBody.Email)
-		return fiber.NewError(fiber.StatusConflict, message)
-	}
-	if userErr != pgx.ErrNoRows {
-		return fiber.NewError(fiber.StatusInternalServerError, "Internal Server Error")
-	}
-	key := generateHash(reqBody.Email, ctx.IP(), REGISTERATION_HASH_PREFIX)
-	storedOtp := new(OTPValue)
-	storedOtpErr := k.Get(ctx.Context(), key, storedOtp)
-	if storedOtpErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error fetching OTP")
-	}
-	o.SendOTP(reqBody.Email, storedOtp.Otp)
-	res := types.Response[string]{
-		Success: true,
-		Data:    "OTP resent successfully!",
-	}
-	return ctx.JSON(res)
-
-}
-
-func RegisterVerifyOTP(ctx *fiber.Ctx) error {
-	k := keysto.GetClient()
-
-	type RequestBody struct {
-		Email string `json:"email" validate:"required,email"`
-		Name  string `json:"name" validate:"required"`
-		Otp   string `json:"otp" validate:"required"`
-	}
-
-	reqBody, validationErr := checkmate.ValidateBody[RequestBody](ctx)
+	body, validationErr := checkmate.ValidateBody[RequestBody](ctx)
 
 	if validationErr != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Bad Request")
 	}
 
-	queries := db.DBQueries()
-
-	_, userErr := queries.GetAppUserByEmail(ctx.Context(), reqBody.Email)
+	// Check if an user exists with the given email address
+	_, userErr := queries.GetAppUserByEmail(ctx.Context(), body.Email)
 
 	if userErr == nil {
-		message := fmt.Sprintf("User with Email ID: %s already exists", reqBody.Email)
-		return fiber.NewError(fiber.StatusConflict, message)
+		return fiber.NewError(fiber.StatusConflict, "User already exists")
 	}
 
 	if userErr != pgx.ErrNoRows {
-		return fiber.NewError(fiber.StatusInternalServerError, "Internal Server Error")
+		return fiber.NewError(fiber.StatusInternalServerError, "Internal server error")
 	}
 
-	key := generateHash(reqBody.Email, ctx.IP(), REGISTERATION_HASH_PREFIX)
+	// Check if an user exists with the given username
 
-	storedOtp := new(OTPValue)
+	_, usernameErr := queries.GetAppUserByUsername(ctx.Context(), body.Username)
 
-	storedOtpErr := k.Get(ctx.Context(), key, storedOtp)
-
-	if storedOtpErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error fetching OTP")
+	if usernameErr == nil {
+		return fiber.NewError(fiber.StatusConflict, "User already exists")
 	}
 
-	if storedOtp.Otp != reqBody.Otp {
-		return fiber.NewError(fiber.StatusUnauthorized, "OTP does not match")
+	if usernameErr != pgx.ErrNoRows {
+		return fiber.NewError(fiber.StatusInternalServerError, "Internal server error")
 	}
+
+	// Encrypt the password
+
+	cryptpass, cryptpassErr := bcrypt.GenerateFromPassword([]byte(body.Password), 14)
+
+	if cryptpassErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error encrypting password")
+	}
+
+	// Create a user entry in the database
 
 	_, newUserErr := queries.CreateAppUser(ctx.Context(), db.CreateAppUserParams{
-		Email:         reqBody.Email,
-		Name:          reqBody.Name,
-		EmailVerified: true,
+		Username: body.Username,
+		Email:    body.Email,
+		Password: string(cryptpass),
 	})
 
 	if newUserErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error creating user")
+		return fiber.NewError(fiber.StatusInternalServerError, "Error creating new user")
 	}
 
-	delOtpErr := k.Delete(ctx.Context(), key)
-
-	if delOtpErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error syncing cache")
-	}
 	res := &types.Response[string]{
 		Success: true,
-		Data:    "OTP Verified. User created successfully!",
-	}
-	return ctx.JSON(res)
-}
-
-func SignInSendOTP(ctx *fiber.Ctx) error {
-	o := hedwig.GetOrchestrator()
-
-	queries := db.DBQueries()
-
-	k := keysto.GetClient()
-
-	type RequestBody struct {
-		Email string `json:"email" validate:"required,email"`
-	}
-
-	reqBody, validationErr := checkmate.ValidateBody[RequestBody](ctx)
-
-	if validationErr != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Bad request")
-	}
-
-	_, userErr := queries.GetAppUserByEmail(ctx.Context(), reqBody.Email)
-
-	if userErr != nil {
-		if userErr == pgx.ErrNoRows {
-			return fiber.NewError(fiber.StatusNotFound, "User not found")
-		} else {
-			return fiber.NewError(fiber.StatusInternalServerError, "Internal Server Error")
-		}
-	}
-
-	key := generateHash(reqBody.Email, ctx.IP(), SIGNIN_HASH_PREFIX)
-
-	storedOTP := new(OTPValue)
-
-	storedOTPErr := k.Get(ctx.Context(), key, storedOTP)
-
-	if storedOTPErr == nil {
-		return fiber.NewError(fiber.StatusConflict, "OTP already generated")
-	} else if storedOTPErr != keysto.Nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error fetching OTP")
-	}
-
-	otp, otpErr := generateOTP()
-
-	if otpErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error generating OTP")
-	}
-
-	newOtp := &OTPValue{
-
-		Otp: otp,
-	}
-	setOtpErr := k.Set(ctx.Context(), key, newOtp, OTP_EXPIRATION_TIME)
-
-	if setOtpErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error storing OTP")
-	}
-
-	o.SendOTP(reqBody.Email, otp)
-
-	res := types.Response[string]{
-		Success: true,
-		Data:    "OTP sent successfully",
+		Data:    "User created successfully",
 	}
 
 	return ctx.JSON(res)
 }
 
-func SignInResendOTP(ctx *fiber.Ctx) error {
-	o := hedwig.GetOrchestrator()
-
-	k := keysto.GetClient()
+func Signin(ctx *fiber.Ctx) error {
 
 	queries := db.DBQueries()
 
 	type RequestBody struct {
-		Email string `json:"email" validate:"required,email"`
+		Username string `json:"username" validate:"required"`
+		Password string `json:"password" validate:"required"`
 	}
 
-	reqBody, validationErr := checkmate.ValidateBody[RequestBody](ctx)
+	body, validationErr := checkmate.ValidateBody[RequestBody](ctx)
 
 	if validationErr != nil {
 		return fiber.NewError(fiber.StatusBadRequest, "Bad Request")
 	}
 
-	_, userErr := queries.GetAppUserByEmail(ctx.Context(), reqBody.Email)
+	// Check if the user exists with the given username and get the user
 
-	if userErr == pgx.ErrNoRows {
-		return fiber.NewError(fiber.StatusNotFound, "User not found")
-	} else if userErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error fetching user details")
-	}
-
-	key := generateHash(reqBody.Email, ctx.IP(), SIGNIN_HASH_PREFIX)
-	storedOtp := new(OTPValue)
-	storedOtpErr := k.Get(ctx.Context(), key, storedOtp)
-	if storedOtpErr != nil {
-		return fiber.NewError(fiber.StatusNotFound, "Error fetching OTP")
-	}
-
-	o.SendOTP(reqBody.Email, storedOtp.Otp)
-
-	res := types.Response[string]{
-		Success: true,
-		Data:    "OTP resent successfully",
-	}
-	return ctx.JSON(res)
-}
-
-func SignInVerifyOTP(ctx *fiber.Ctx) error {
-	k := keysto.GetClient()
-	queries := db.DBQueries()
-
-	type RequestBody struct {
-		Email string `json:"email" validate:"required,email"`
-		Otp   string `json:"otp" validate:"required"`
-	}
-
-	reqBody, validationErr := checkmate.ValidateBody[RequestBody](ctx)
-
-	if validationErr != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Bad request")
-	}
-
-	user, userErr := queries.GetAppUserByEmail(ctx.Context(), reqBody.Email)
+	user, userErr := queries.GetAppUserByUsername(ctx.Context(), body.Username)
 
 	if userErr != nil {
-		return fiber.NewError(fiber.StatusNotFound, "Error fetching user details")
+		return fiber.NewError(fiber.StatusInternalServerError, "Error fetching user data")
 	}
 
-	storedOtpKey := generateHash(reqBody.Email, ctx.IP(), SIGNIN_HASH_PREFIX)
+	// Check if the passwords match
 
-	storedOtp := new(OTPValue)
+	isMatching := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)) == nil
 
-	storedOtpErr := k.Get(ctx.Context(), storedOtpKey, storedOtp)
-
-	if storedOtpErr != nil {
-		return fiber.NewError(fiber.StatusNotFound, "Error fvalidation OTP")
+	if !isMatching {
+		return fiber.NewError(fiber.StatusUnauthorized, "Invalid username or password")
 	}
 
-	if storedOtp.Otp != reqBody.Otp {
-		return fiber.NewError(fiber.StatusUnauthorized, "OTP does not match. Please verify")
-	}
+	// Generate an access token and refresh token
 
-	claims := new(jwt.Claim)
-	claims.UserID = user.ID
-	claims.Email = user.Email
-	claims.Name = user.Name
+	claims := &jwt.Claim{
+		UserID:   user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+	}
 
 	accessToken, accessTokenErr := jwt.Sign(claims)
 
@@ -368,122 +194,132 @@ func SignInVerifyOTP(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, "Error generating access token")
 	}
 
-	newKey := generateRefreshToken()
+	refreshToken := generateRefreshToken()
 
-	type RefreshToken struct {
-		UserID int32  `json:"userID"`
-		Name   string `json:"name"`
-		Email  string `json:"email"`
+	// Store the refresh token in the database
+	expiresAt := pgtype.Timestamptz{
+		Time:  time.Now().UTC().Add(time.Hour * 12),
+		Valid: true,
+	}
+	reftoken, reftokenErr := queries.CreateRefeshToken(ctx.Context(), db.CreateRefeshTokenParams{
+		UserID:    user.ID,
+		Token:     refreshToken,
+		UserIp:    ctx.IP(),
+		ExpiresAt: expiresAt,
+	})
+
+	if reftokenErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error generating refresh token")
 	}
 
-	refreshToken := &RefreshToken{
-		UserID: user.ID,
-		Name:   user.Name,
-		Email:  user.Email,
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "accessToken",
+		Value:    accessToken,
+		Expires:  time.Now().UTC().Add(time.Minute * 5),
+		HTTPOnly: true,
+	})
+
+	type Response struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+	res := &types.Response[Response]{
+		Success: true,
+		Data: Response{
+			RefreshToken: reftoken.Token,
+		},
 	}
 
-	storedRefreshTokenErr := k.Set(ctx.Context(), newKey, refreshToken, time.Hour*24)
+	return ctx.JSON(res)
+}
+
+func Refresh(ctx *fiber.Ctx) error {
+
+	// Get the user's refresh token from the query params
+	queries := db.DBQueries()
+	type Params struct {
+		RefreshToken string `json:"refreshToken" validate:"required"`
+	}
+
+	params, validationErr := checkmate.ValidateQueryParams[Params](ctx)
+
+	if validationErr != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Bad Request")
+	}
+
+	// Fetch the valid token from the database
+
+	reftoken, reftokenErr := queries.GetLiveRefreshTokenByToken(ctx.Context(), params.RefreshToken)
+
+	if reftokenErr != nil {
+		return fiber.NewError(fiber.StatusUnauthorized, "Refresh token has expired")
+	}
+
+	// Expire the previous token
+
+	expireErr := queries.ExpireToken(ctx.Context(), reftoken.ID)
+
+	if expireErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error validating the refresh token")
+	}
+
+	// Fetch the user to whom the token belonged
+
+	user, userErr := queries.GetAppUserByID(ctx.Context(), reftoken.UserID)
+
+	if userErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error fetching user details")
+	}
+
+	// Generate new access token
+
+	claims := &jwt.Claim{
+		UserID:   user.ID,
+		Username: user.Username,
+		Email:    user.Email,
+	}
+
+	accessToken, accessTokenErr := jwt.Sign(claims)
+
+	if accessTokenErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error generating new access token")
+	}
+
+	// Generate a new refresh token
+
+	newToken := generateRefreshToken()
+
+	// Store the new refresh token
+	expiresAt := pgtype.Timestamptz{
+		Time:  time.Now().UTC().Add(time.Hour * 12),
+		Valid: true,
+	}
+	storedRefreshToken, storedRefreshTokenErr := queries.CreateRefeshToken(ctx.Context(), db.CreateRefeshTokenParams{
+		UserID:    user.ID,
+		Token:     newToken,
+		UserIp:    ctx.IP(),
+		ExpiresAt: expiresAt,
+	})
 
 	if storedRefreshTokenErr != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Error generating refresh token")
 	}
 
-	type ResData struct {
-		Message      string `json:"message"`
-		RefreshToken string `json:"refreshToken"`
-	}
-
-	res := types.Response[ResData]{
-		Success: true,
-		Data: ResData{
-			Message:      "Validation successful",
-			RefreshToken: newKey,
-		},
-	}
-
+	// Set the access token in http-only cookie
 	ctx.Cookie(&fiber.Cookie{
 		Name:     "accessToken",
 		Value:    accessToken,
-		Expires:  time.Now().Add(time.Minute * 5),
+		Expires:  time.Now().UTC().Add(time.Minute * 5),
 		HTTPOnly: true,
 	})
 
-	return ctx.JSON(res)
-}
-
-func RefreshToken(ctx *fiber.Ctx) error {
-	k := keysto.GetClient()
-
-	type RequsetBody struct {
-		RefreshToken string `json:"refreshToken" validate:"required"`
-	}
-
-	reqBody, validationErr := checkmate.ValidateBody[RequsetBody](ctx)
-
-	if validationErr != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "Bad request")
-	}
-
-	// Check if the refresh token is valid
-
-	type RefreshToken struct {
-		UserID int32  `json:"userID"`
-		Name   string `json:"name"`
-		Email  string `json:"email"`
-	}
-	storedToken := new(RefreshToken)
-
-	storedTokenErr := k.Get(ctx.Context(), reqBody.RefreshToken, storedToken)
-
-	if storedTokenErr != nil {
-		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorised")
-	}
-
-	claims := new(jwt.Claim)
-	claims.UserID = storedToken.UserID
-	claims.Email = storedToken.Email
-	claims.Name = storedToken.Name
-
-	accessToken, accessTokenErr := jwt.Sign(claims)
-
-	if accessTokenErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error generating access token")
-	}
-	newToken := generateRefreshToken()
-	newRefreshToken := &RefreshToken{
-		UserID: storedToken.UserID,
-		Email:  storedToken.Email,
-		Name:   storedToken.Name,
-	}
-
-	deleteOldTokenErr := k.Delete(ctx.Context(), reqBody.RefreshToken)
-
-	if deleteOldTokenErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error updating the refresh token")
-	}
-
-	addNewRefreshTokenErr := k.Set(ctx.Context(), newToken, newRefreshToken, time.Hour*24)
-
-	if addNewRefreshTokenErr != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "Error updating the refresh token")
-	}
-
-	ctx.Cookie(&fiber.Cookie{
-		Name:     "accessToken",
-		Value:    accessToken,
-		Expires:  time.Now().Add(time.Minute * 5),
-		HTTPOnly: true,
-	})
-	type ResData struct {
-		Message      string `json:"message"`
+	type Response struct {
 		RefreshToken string `json:"refreshToken"`
 	}
 
-	res := types.Response[ResData]{
+	res := &types.Response[Response]{
 		Success: true,
-		Data: ResData{
-			Message:      "Token refreshed successfully",
-			RefreshToken: newToken,
+		Data: Response{
+			RefreshToken: storedRefreshToken.Token,
 		},
 	}
 

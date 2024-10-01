@@ -10,13 +10,14 @@ import (
 
 type AppUser struct {
 	ID            int32
-	Name          string
 	Email         string
 	PhotoUrl      string
 	EmailVerified bool
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	DeletedAt     pgtype.Timestamptz
+	Username      string
+	Password      string
 }
 
 type Dotsource struct {
@@ -47,4 +48,16 @@ type Preference struct {
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
 	DeletedAt      pgtype.Timestamptz
+}
+
+type RefreshToken struct {
+	ID        int32
+	UserID    int32
+	Token     string
+	UserIp    string
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
+	Expired   bool
 }
