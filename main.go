@@ -70,6 +70,7 @@ func main() {
 		router.Post("/signin", auth_handler.Signin).Name("signin")
 		router.Get("/refresh", auth_handler.Refresh).Name("refresh")
 		router.Get("/forgot-password", auth_handler.ForgotPassword).Name("forgot-password")
+		route.Post("/reset-password", auth_handler.ResetPassword).Name("reset-password")
 	}, "auth.")
 
 	v1.Route("/user", func(router fiber.Router) {

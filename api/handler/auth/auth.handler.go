@@ -355,3 +355,81 @@ func ForgotPassword(ctx *fiber.Ctx) error {
 	return ctx.JSON(res)
 
 }
+
+func ResetPassword(ctx *fiber.Ctx) error {
+	// Get request body, parse and assign it to a variable
+
+	type RequestBody struct {
+		Token    string `json:"token" validate:"required"`
+		Password string `json:"password"`
+	}
+
+	body, err := checkmate.ValidateBody[RequestBody](ctx)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Bad Request")
+	}
+
+	// Check if the token is valid a get the user details related to the token
+	queries := db.DBQueries()
+	tokenData, err := queries.GetLivePasswordResetToken(ctx.Context(), body.Token)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusNotFound, "Invalid token")
+	}
+
+	user, err := queries.GetAppUserByID(ctx.Context(), tokenData.UserID)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error fetching user data")
+	}
+
+	// Check if the current password matches the previous one
+
+	matchErr := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
+
+	if matchErr == nil {
+		fiber.NewError(fiber.StatusConflict, "Password cannot be similar to previous password")
+	}
+
+	// Encrypt the given password, update the user record and invalidate the token.
+
+	encryptedPass, err := bcrypt.GenerateFromPassword([]byte(body.Password), 14)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error encrypting the password")
+	}
+
+	tx, err := db.Connection().Begin(ctx.Context())
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error updating the password")
+	}
+
+	defer tx.Rollback(ctx.Context())
+
+	qtx := db.DBQueries().WithTx(tx)
+
+	updatePasswordErr := qtx.UpdateAppUserPassword(ctx.Context(), db.UpdateAppUserPasswordParams{
+		Password: string(encryptedPass),
+		ID:       user.ID,
+	})
+
+	if updatePasswordErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error updating password")
+	}
+
+	updateTokenErr := qtx.ExpirePasswordResetToken(ctx.Context(), tokenData.ID)
+
+	if updateTokenErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error invalidating the token")
+	}
+
+	tx.Commit(ctx.Context())
+
+	res := &types.Response[string]{
+		Success: true,
+		Data:    "Password reset is successfult",
+	}
+	return ctx.JSON(res)
+}
