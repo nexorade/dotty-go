@@ -62,3 +62,16 @@ CREATE TABLE dotsource (
     FOREIGN KEY (dotsource_path_id) REFERENCES dotsource_path(id) ON DELETE CASCADE
 );
 
+-- Create "password_reset_token" table
+CREATE TABLE password_reset_token (
+	id SERIAL PRIMARY KEY,
+	user_id INTEGER NOT NULL,
+	token VARCHAR(255) NOT NULL UNIQUE,
+	user_ip VARCHAR(255) NOT NULL,    
+	expired BOOLEAN NOT NULL DEFAULT FALSE,
+	expires_at TIMESTAMPTZ NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    	updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    	deleted_at TIMESTAMPTZ DEFAULT NULL,
+	FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+);

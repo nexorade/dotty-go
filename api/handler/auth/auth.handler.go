@@ -1,10 +1,11 @@
 package auth_handler
 
 import (
-	"crypto/sha256"
+	"fmt"
 	"nexorade/dotty-go/api/types"
 	"nexorade/dotty-go/db"
 	"nexorade/dotty-go/internal/checkmate"
+	"nexorade/dotty-go/internal/hedwig"
 	"nexorade/dotty-go/internal/jwt"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/nanorand/nanorand"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,24 +27,7 @@ type OTPValue struct {
 	Otp string `json:"otp"`
 }
 
-func generateHash(email string, client_ip string, prefix string) string {
-	h := sha256.New()
-	h.Write([]byte(prefix))
-	h.Write([]byte(email))
-	h.Write([]byte(client_ip))
-	return string(h.Sum(nil))
-}
-
-func generateOTP() (string, error) {
-	otp, otpErr := nanorand.Gen(6)
-
-	if otpErr != nil {
-		return "", otpErr
-	}
-	return otp, nil
-}
-
-func generateRefreshToken() string {
+func generateToken() string {
 	return uuid.New().String()
 }
 
@@ -182,19 +165,13 @@ func Signin(ctx *fiber.Ctx) error {
 
 	// Generate an access token and refresh token
 
-	claims := &jwt.Claim{
-		UserID:   user.ID,
-		Username: user.Username,
-		Email:    user.Email,
-	}
-
-	accessToken, accessTokenErr := jwt.Sign(claims)
+	accessToken, accessTokenErr := jwt.Sign(fmt.Sprint(user.ID), user.Username, user.Email)
 
 	if accessTokenErr != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Error generating access token")
 	}
 
-	refreshToken := generateRefreshToken()
+	refreshToken := generateToken()
 
 	// Store the refresh token in the database
 	expiresAt := pgtype.Timestamptz{
@@ -272,13 +249,7 @@ func Refresh(ctx *fiber.Ctx) error {
 
 	// Generate new access token
 
-	claims := &jwt.Claim{
-		UserID:   user.ID,
-		Username: user.Username,
-		Email:    user.Email,
-	}
-
-	accessToken, accessTokenErr := jwt.Sign(claims)
+	accessToken, accessTokenErr := jwt.Sign(fmt.Sprint(user.ID), user.Username, user.Email)
 
 	if accessTokenErr != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Error generating new access token")
@@ -286,7 +257,7 @@ func Refresh(ctx *fiber.Ctx) error {
 
 	// Generate a new refresh token
 
-	newToken := generateRefreshToken()
+	newToken := generateToken()
 
 	// Store the new refresh token
 	expiresAt := pgtype.Timestamptz{
@@ -324,4 +295,63 @@ func Refresh(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.JSON(res)
+}
+
+func ForgotPassword(ctx *fiber.Ctx) error {
+
+	// Define a query struct for query params
+	type Query struct {
+		Email string `json:"email" validate:"required,email"`
+	}
+
+	// Validate the query params and assign it to a variable of type Query
+	query, validationErr := checkmate.ValidateQueryParams[Query](ctx)
+
+	if validationErr != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "Bad request")
+	}
+
+	queries := db.DBQueries()
+
+	// Check if the user with the given email exists
+	user, userErr := queries.GetAppUserByEmail(ctx.Context(), query.Email)
+
+	if userErr != nil {
+		if userErr == pgx.ErrNoRows {
+			return fiber.NewError(fiber.StatusNotFound, "User not found")
+		} else {
+			fiber.NewError(fiber.StatusInternalServerError, "Error fetching user details")
+		}
+	}
+
+	// Generate a random token and store it in the DB
+
+	newToken := generateToken()
+	expiresAt := pgtype.Timestamptz{
+		Time:  time.Now().UTC().Add(time.Minute * 10),
+		Valid: true,
+	}
+	storedToken, storedTokenErr := queries.CreatePasswordResetToken(ctx.Context(), db.CreatePasswordResetTokenParams{
+		UserID:    user.ID,
+		Token:     newToken,
+		UserIp:    ctx.IP(),
+		ExpiresAt: expiresAt,
+	})
+
+	if storedTokenErr != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Error generating password reset link")
+	}
+
+	// Send a password reset link to the email and send an acknowledgement
+
+	o := hedwig.GetOrchestrator()
+
+	o.SendPasswordResetLink(user.Email, storedToken.Token)
+
+	res := &types.Response[string]{
+		Success: true,
+		Data:    "Reset link sent successfullt",
+	}
+	return ctx.JSON(res)
+
 }

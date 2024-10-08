@@ -16,6 +16,9 @@ UPDATE app_user SET email=$1 WHERE id=$2 AND deleted_at IS  NULL;
 -- name: UpdateAppUserPhotoURL :exec
 UPDATE app_user SET photo_url=$1 WHERE id=$2 AND deleted_at IS  NULL;
 
+-- name: UpdateAppUserPassword :exec
+UPDATE app_user SET password=$1 WHERE id=$2 AND deleted_at IS NULL;
+
 -- name: SoftDeleteAppUser :exec
 UPDATE app_user SET deleted_at=CURRENT_TIMESTAMP WHERE id=$1;
 
@@ -28,3 +31,11 @@ SELECT * FROM refresh_token WHERE token=$1 AND expires_at > now() AND expired IS
 -- name: ExpireToken :exec
 UPDATE refresh_token SET expired=TRUE WHERE id=$1;
 
+-- name: CreatePasswordResetToken :one
+INSERT INTO password_reset_token (user_id, token, user_ip, expires_at) VALUES ($1,$2,$3,$4) RETURNING *;
+
+-- name: GetLivePasswordResetToken :one
+SELECT * FROM password_reset_token WHERE token=$1 and expires_at > now() AND expired IS FALSE;
+
+-- name: ExpirePasswordResetToken :exec
+UPDATE password_reset_token SET expired=TRUE WHERE id=$1;

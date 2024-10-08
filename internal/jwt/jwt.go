@@ -1,29 +1,34 @@
 package jwt
 
 import (
-	"errors"
+	"os"
 	"time"
 
 	go_jwt "github.com/golang-jwt/jwt/v5"
 )
 
-var SIGNING_KEY = []byte("WHATEVER")
+var SIGNING_KEY = []byte(os.Getenv("JWT_SECRET"))
+
+var keyFunc go_jwt.Keyfunc = func(_ *go_jwt.Token) (interface{}, error) { return SIGNING_KEY, nil }
 
 type Claim struct {
-	UserID   int32  `json:"userId"`
+	UserID   string `json:"userId"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
+	go_jwt.RegisteredClaims
 }
 
-func Sign(claim *Claim) (string, error) {
-
-	t := go_jwt.NewWithClaims(go_jwt.SigningMethodHS256, go_jwt.MapClaims{
-		"userId": claim.UserID,
-		"name":   claim.Username,
-		"email":  claim.Email,
-		"exp":    time.Now().Add(time.Minute * 10),
-		"iat":    time.Now(),
-	})
+func Sign(userID string, username string, email string) (string, error) {
+	c := Claim{
+		userID,
+		username,
+		email,
+		go_jwt.RegisteredClaims{
+			ExpiresAt: go_jwt.NewNumericDate(time.Now().UTC().Add(time.Minute * 10)),
+			IssuedAt:  go_jwt.NewNumericDate(time.Now().UTC()),
+		},
+	}
+	t := go_jwt.NewWithClaims(go_jwt.SigningMethodHS256, c)
 	sign, err := t.SignedString(SIGNING_KEY)
 	if err != nil {
 		return "", err
@@ -31,17 +36,22 @@ func Sign(claim *Claim) (string, error) {
 	return sign, nil
 }
 
-func Validate(tokenString string) (*go_jwt.Token, error) {
-	token, err := go_jwt.Parse(tokenString, func(t *go_jwt.Token) (interface{}, error) { return SIGNING_KEY, nil })
+func Validate(tokenString string) (*Claim, bool) {
+	token, err := go_jwt.Parse(tokenString, keyFunc)
 
 	if err != nil {
-		return nil, err
+		return nil, false
 	}
 
-	if !token.Valid {
-		e := errors.New("Invalid token")
-		return nil, e
-	}
+	if claims, ok := token.Claims.(go_jwt.MapClaims); ok {
+		c := &Claim{
+			UserID:   claims["userId"].(string),
+			Username: claims["username"].(string),
+			Email:    claims["email"].(string),
+		}
 
-	return token, nil
+		return c, true
+	} else {
+		return nil, false
+	}
 }

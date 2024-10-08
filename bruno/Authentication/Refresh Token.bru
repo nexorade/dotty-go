@@ -5,7 +5,11 @@ meta {
 }
 
 get {
-  url: http://127.0.0.1:8080/api/v1/auth/refresh
+  url: http://127.0.0.1:8080/api/v1/auth/refresh?refreshToken=a7406ee8-9cc5-4d96-8d33-2d543ebfb5a3
   body: none
   auth: none
+}
+
+params:query {
+  refreshToken: a7406ee8-9cc5-4d96-8d33-2d543ebfb5a3
 }

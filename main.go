@@ -3,16 +3,20 @@ package main
 import (
 	"errors"
 	"fmt"
+	logger "log"
+	"nexorade/dotty-go/api/handler/auth"
+	"nexorade/dotty-go/api/handler/user"
+	"nexorade/dotty-go/api/middleware"
+	"nexorade/dotty-go/api/types"
+	"nexorade/dotty-go/db"
+	"nexorade/dotty-go/internal/hedwig"
+
+	"os"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	fiber_logger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/rs/zerolog/log"
-	logger "log"
-	"nexorade/dotty-go/api/handler/auth"
-	"nexorade/dotty-go/api/types"
-	"nexorade/dotty-go/db"
-	"nexorade/dotty-go/internal/hedwig"
-	"os"
 )
 
 var port string = ":8080"
@@ -65,6 +69,11 @@ func main() {
 		router.Post("/register", auth_handler.Register).Name("register")
 		router.Post("/signin", auth_handler.Signin).Name("signin")
 		router.Get("/refresh", auth_handler.Refresh).Name("refresh")
+		router.Get("/forgot-password", auth_handler.ForgotPassword).Name("forgot-password")
 	}, "auth.")
+
+	v1.Route("/user", func(router fiber.Router) {
+		router.Patch("/update-password", middleware.Authorise, user_handler.UpdatePassword).Name("update-password")
+	}, "user.")
 	logger.Fatal(app.Listen(port))
 }
