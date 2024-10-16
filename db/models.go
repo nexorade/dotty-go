@@ -10,14 +10,14 @@ import (
 
 type AppUser struct {
 	ID            int32
-	Name          string
 	Email         string
-	Password      string
 	PhotoUrl      string
 	EmailVerified bool
 	CreatedAt     pgtype.Timestamptz
 	UpdatedAt     pgtype.Timestamptz
 	DeletedAt     pgtype.Timestamptz
+	Username      string
+	Password      string
 }
 
 type Dotsource struct {
@@ -40,6 +40,18 @@ type DotsourcePath struct {
 	DeletedAt    pgtype.Timestamptz
 }
 
+type PasswordResetToken struct {
+	ID        int32
+	UserID    int32
+	Token     string
+	UserIp    string
+	Expired   bool
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	DeletedAt pgtype.Timestamptz
+}
+
 type Preference struct {
 	ID             int32
 	UserID         int32
@@ -54,9 +66,10 @@ type RefreshToken struct {
 	ID        int32
 	UserID    int32
 	Token     string
-	ClientIp  string
+	UserIp    string
 	ExpiresAt pgtype.Timestamptz
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 	DeletedAt pgtype.Timestamptz
+	Expired   bool
 }

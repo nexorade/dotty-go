@@ -1,0 +1,15 @@
+meta {
+  name: Username Exists
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://127.0.0.1:8080/api/v1/auth/username-exists?username=cchirag85
+  body: none
+  auth: none
+}
+
+params:query {
+  username: cchirag85
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Register User
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://127.0.0.1:8080/api/v1/auth/register
+  body: formUrlEncoded
+  auth: none
+}
+
+params:query {
+  : 
+}
+
+body:form-urlencoded {
+  email: demo@gmail.com
+  username: demo
+  password: Incorrect132435
+}
