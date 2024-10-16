@@ -1,5 +1,11 @@
 -- name: CreateAppUser :one
-INSERT INTO app_user (username, email, password) VALUES ($1, $2, $3) RETURNING *;
+INSERT INTO app_user (username, email, password) VALUES ($1, $2, $3) RETURNING 1;
+
+-- name: UsernameExists :one
+SELECT 1 FROM app_user WHERE username=$1 AND deleted_at IS NULL;
+
+-- name: UserExistsWithEmailAndUsername :one
+SELECT 1 FROM app_user WHERE (username=$1 OR email=$2) AND deleted_at IS NULL;
 
 -- name: GetAppUserByID :one
 SELECT * FROM app_user WHERE id=$1 AND deleted_at IS NULL;
@@ -25,8 +31,8 @@ UPDATE app_user SET deleted_at=CURRENT_TIMESTAMP WHERE id=$1;
 -- name: CreateRefeshToken :one
 INSERT INTO refresh_token (user_id, token, user_ip, expires_at) VALUES ($1, $2, $3, $4) RETURNING *;
 
--- name: GetLiveRefreshTokenByToken :one
-SELECT * FROM refresh_token WHERE token=$1 AND expires_at > now() AND expired IS FALSE;
+-- name: GetRefreshTokenInfoByToken :one
+SELECT U.id as user_id, U.username, U.email, RT.id AS token_id, RT.token FROM refresh_token RT RIGHT JOIN public.app_user U on RT.user_id = U.id WHERE RT.token=$1 AND expires_at > now() AND expired IS FALSE;
 
 -- name: ExpireToken :exec
 UPDATE refresh_token SET expired=TRUE WHERE id=$1;

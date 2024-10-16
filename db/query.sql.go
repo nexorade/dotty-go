@@ -12,7 +12,7 @@ import (
 )
 
 const createAppUser = `-- name: CreateAppUser :one
-INSERT INTO app_user (username, email, password) VALUES ($1, $2, $3) RETURNING id, email, photo_url, email_verified, created_at, updated_at, deleted_at, username, password
+INSERT INTO app_user (username, email, password) VALUES ($1, $2, $3) RETURNING 1
 `
 
 type CreateAppUserParams struct {
@@ -21,21 +21,11 @@ type CreateAppUserParams struct {
 	Password string
 }
 
-func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (AppUser, error) {
+func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (int32, error) {
 	row := q.db.QueryRow(ctx, createAppUser, arg.Username, arg.Email, arg.Password)
-	var i AppUser
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.PhotoUrl,
-		&i.EmailVerified,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-		&i.Username,
-		&i.Password,
-	)
-	return i, err
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const createPasswordResetToken = `-- name: CreatePasswordResetToken :one
@@ -206,23 +196,27 @@ func (q *Queries) GetLivePasswordResetToken(ctx context.Context, token string) (
 	return i, err
 }
 
-const getLiveRefreshTokenByToken = `-- name: GetLiveRefreshTokenByToken :one
-SELECT id, user_id, token, user_ip, expires_at, created_at, updated_at, deleted_at, expired FROM refresh_token WHERE token=$1 AND expires_at > now() AND expired IS FALSE
+const getRefreshTokenInfoByToken = `-- name: GetRefreshTokenInfoByToken :one
+SELECT U.id as user_id, U.username, U.email, RT.id AS token_id, RT.token FROM refresh_token RT RIGHT JOIN public.app_user U on RT.user_id = U.id WHERE RT.token=$1 AND expires_at > now() AND expired IS FALSE
 `
 
-func (q *Queries) GetLiveRefreshTokenByToken(ctx context.Context, token string) (RefreshToken, error) {
-	row := q.db.QueryRow(ctx, getLiveRefreshTokenByToken, token)
-	var i RefreshToken
+type GetRefreshTokenInfoByTokenRow struct {
+	UserID   int32
+	Username string
+	Email    string
+	TokenID  pgtype.Int4
+	Token    pgtype.Text
+}
+
+func (q *Queries) GetRefreshTokenInfoByToken(ctx context.Context, token string) (GetRefreshTokenInfoByTokenRow, error) {
+	row := q.db.QueryRow(ctx, getRefreshTokenInfoByToken, token)
+	var i GetRefreshTokenInfoByTokenRow
 	err := row.Scan(
-		&i.ID,
 		&i.UserID,
+		&i.Username,
+		&i.Email,
+		&i.TokenID,
 		&i.Token,
-		&i.UserIp,
-		&i.ExpiresAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-		&i.Expired,
 	)
 	return i, err
 }
@@ -276,4 +270,31 @@ type UpdateAppUserPhotoURLParams struct {
 func (q *Queries) UpdateAppUserPhotoURL(ctx context.Context, arg UpdateAppUserPhotoURLParams) error {
 	_, err := q.db.Exec(ctx, updateAppUserPhotoURL, arg.PhotoUrl, arg.ID)
 	return err
+}
+
+const userExistsWithEmailAndUsername = `-- name: UserExistsWithEmailAndUsername :one
+SELECT 1 FROM app_user WHERE (username=$1 OR email=$2) AND deleted_at IS NULL
+`
+
+type UserExistsWithEmailAndUsernameParams struct {
+	Username string
+	Email    string
+}
+
+func (q *Queries) UserExistsWithEmailAndUsername(ctx context.Context, arg UserExistsWithEmailAndUsernameParams) (int32, error) {
+	row := q.db.QueryRow(ctx, userExistsWithEmailAndUsername, arg.Username, arg.Email)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const usernameExists = `-- name: UsernameExists :one
+SELECT 1 FROM app_user WHERE username=$1 AND deleted_at IS NULL
+`
+
+func (q *Queries) UsernameExists(ctx context.Context, username string) (int32, error) {
+	row := q.db.QueryRow(ctx, usernameExists, username)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }

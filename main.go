@@ -3,20 +3,18 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	fiber_logger "github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/rs/zerolog/log"
 	logger "log"
 	"nexorade/dotty-go/api/handler/auth"
 	"nexorade/dotty-go/api/handler/user"
 	"nexorade/dotty-go/api/middleware"
 	"nexorade/dotty-go/api/types"
 	"nexorade/dotty-go/db"
-	"nexorade/dotty-go/internal/hedwig"
-
+	// "nexorade/dotty-go/internal/hedwig"
 	"os"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	fiber_logger "github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/rs/zerolog/log"
 )
 
 var port string = ":8080"
@@ -35,8 +33,8 @@ func main() {
 		log.Fatal().Str("service", "DATABASE_PING").Msg(pingErr.Error())
 	}
 
-	hedwig.InitialiseOrchestrator()
-	defer hedwig.CloseOrchastrator()
+	// hedwig.InitialiseOrchestrator()
+	// defer hedwig.CloseOrchastrator()
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
@@ -70,7 +68,7 @@ func main() {
 		router.Post("/signin", auth_handler.Signin).Name("signin")
 		router.Get("/refresh", auth_handler.Refresh).Name("refresh")
 		router.Get("/forgot-password", auth_handler.ForgotPassword).Name("forgot-password")
-		route.Post("/reset-password", auth_handler.ResetPassword).Name("reset-password")
+		router.Post("/reset-password", auth_handler.ResetPassword).Name("reset-password")
 	}, "auth.")
 
 	v1.Route("/user", func(router fiber.Router) {
