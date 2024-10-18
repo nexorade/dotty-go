@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -37,6 +38,7 @@ func Sign(userID string, username string, email string) (string, error) {
 }
 
 func Validate(tokenString string) (*Claim, bool) {
+	fmt.Println("SIGNING_KEY: ", SIGNING_KEY)
 	token, err := go_jwt.Parse(tokenString, keyFunc)
 
 	if err != nil {

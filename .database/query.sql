@@ -45,3 +45,6 @@ SELECT * FROM password_reset_token WHERE token=$1 and expires_at > now() AND exp
 
 -- name: ExpirePasswordResetToken :exec
 UPDATE password_reset_token SET expired=TRUE WHERE id=$1;
+
+-- name: DotsourceExists :one
+SELECT 1 FROM dotsource WHERE user_id=$1 AND name=$2; 

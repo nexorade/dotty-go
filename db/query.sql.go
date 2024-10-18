@@ -94,6 +94,22 @@ func (q *Queries) CreateRefeshToken(ctx context.Context, arg CreateRefeshTokenPa
 	return i, err
 }
 
+const dotsourceExists = `-- name: DotsourceExists :one
+SELECT 1 FROM dotsource WHERE user_id=$1 AND name=$2
+`
+
+type DotsourceExistsParams struct {
+	UserID int32
+	Name   string
+}
+
+func (q *Queries) DotsourceExists(ctx context.Context, arg DotsourceExistsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, dotsourceExists, arg.UserID, arg.Name)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const expirePasswordResetToken = `-- name: ExpirePasswordResetToken :exec
 UPDATE password_reset_token SET expired=TRUE WHERE id=$1
 `

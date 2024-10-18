@@ -3,16 +3,19 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	fiber_logger "github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/rs/zerolog/log"
 	logger "log"
 	"nexorade/dotty-go/api/handler/auth"
+	repo_handler "nexorade/dotty-go/api/handler/repo"
 	"nexorade/dotty-go/api/handler/user"
 	"nexorade/dotty-go/api/middleware"
 	"nexorade/dotty-go/api/types"
 	"nexorade/dotty-go/db"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	fiber_logger "github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/rs/zerolog/log"
+
 	// "nexorade/dotty-go/internal/hedwig"
 	"os"
 )
@@ -74,5 +77,9 @@ func main() {
 	v1.Route("/user", func(router fiber.Router) {
 		router.Patch("/update-password", middleware.Authorise, user_handler.UpdatePassword).Name("update-password")
 	}, "user.")
+
+	v1.Route("/repo", func(router fiber.Router) {
+		router.Post("/create", middleware.Authorise, repo_handler.CreateRepository).Name("create-repository")
+	}, "repo.")
 	logger.Fatal(app.Listen(port))
 }

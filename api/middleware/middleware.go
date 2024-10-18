@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	my_jwt "nexorade/dotty-go/internal/jwt"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,8 +24,8 @@ func Authorise(ctx *fiber.Ctx) error {
 	}
 
 	token := header.AccessToken
-
 	claims, valid := my_jwt.Validate(token)
+	fmt.Println("Claims: ", claims)
 	if !valid {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
