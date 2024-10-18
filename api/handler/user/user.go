@@ -27,7 +27,7 @@ func UpdatePassword(ctx *fiber.Ctx) error {
 	}
 
 	// Get the userId from the context, passed from the middleware
-	userId := ctx.Locals("userId").(string)
+	userId := ctx.Locals("UserID").(string)
 
 	// Parse the userId since the one returned from context is of the type string
 	parsedId, parsedIdErr := strconv.ParseInt(userId, 10, 32)
