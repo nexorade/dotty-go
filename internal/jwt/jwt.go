@@ -1,8 +1,8 @@
 package jwt
 
 import (
-	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	go_jwt "github.com/golang-jwt/jwt/v5"
@@ -10,12 +10,14 @@ import (
 
 var SIGNING_KEY = []byte(os.Getenv("JWT_SECRET"))
 
+const TOKEN_PREFIX = "Bearer"
+
 var keyFunc go_jwt.Keyfunc = func(_ *go_jwt.Token) (interface{}, error) { return SIGNING_KEY, nil }
 
 type Claim struct {
-	UserID   string `json:"userId"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	UserID   string `json:"UserID"`
+	Username string `json:"Username"`
+	Email    string `json:"Email"`
 	go_jwt.RegisteredClaims
 }
 
@@ -34,12 +36,13 @@ func Sign(userID string, username string, email string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return sign, nil
+	token := TOKEN_PREFIX + " " + sign
+	return token, nil
 }
 
 func Validate(tokenString string) (*Claim, bool) {
-	fmt.Println("SIGNING_KEY: ", SIGNING_KEY)
-	token, err := go_jwt.Parse(tokenString, keyFunc)
+	str := strings.Split(tokenString, " ")[1]
+	token, err := go_jwt.Parse(str, keyFunc)
 
 	if err != nil {
 		return nil, false
@@ -47,9 +50,9 @@ func Validate(tokenString string) (*Claim, bool) {
 
 	if claims, ok := token.Claims.(go_jwt.MapClaims); ok {
 		c := &Claim{
-			UserID:   claims["userId"].(string),
-			Username: claims["username"].(string),
-			Email:    claims["email"].(string),
+			UserID:   claims["UserID"].(string),
+			Username: claims["Username"].(string),
+			Email:    claims["Email"].(string),
 		}
 
 		return c, true
