@@ -152,7 +152,7 @@ func Signin(ctx *fiber.Ctx) error {
 	}
 
 	ctx.Cookie(&fiber.Cookie{
-		Name:     "accessToken",
+		Name:     "Authorization",
 		Value:    accessToken,
 		Expires:  time.Now().UTC().Add(time.Minute * 5),
 		HTTPOnly: true,
@@ -229,7 +229,7 @@ func Refresh(ctx *fiber.Ctx) error {
 	}
 
 	ctx.Cookie(&fiber.Cookie{
-		Name:     "accessToken",
+		Name:     "Authorization",
 		Value:    accessToken,
 		Expires:  time.Now().UTC().Add(time.Minute * 5),
 		HTTPOnly: true,

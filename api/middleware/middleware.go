@@ -9,7 +9,7 @@ import (
 
 func Authorise(ctx *fiber.Ctx) error {
 	type Header struct {
-		AccessToken string `reqHeader:"accessToken"`
+		AccessToken string `reqHeader:"Authorization"`
 	}
 
 	header := new(Header)
@@ -28,8 +28,8 @@ func Authorise(ctx *fiber.Ctx) error {
 	if !valid {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
-	ctx.Locals("userId", claims.UserID)
-	ctx.Locals("email", claims.Email)
-	ctx.Locals("username", claims.Username)
+	ctx.Locals("UserID", claims.UserID)
+	ctx.Locals("Email", claims.Email)
+	ctx.Locals("Username", claims.Username)
 	return ctx.Next()
 }
