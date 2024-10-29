@@ -3,16 +3,22 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	fiber_logger "github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/rs/zerolog/log"
 	logger "log"
 	"nexorade/dotty-go/api/handler/auth"
+	repo_handler "nexorade/dotty-go/api/handler/repo"
 	"nexorade/dotty-go/api/handler/user"
 	"nexorade/dotty-go/api/middleware"
 	"nexorade/dotty-go/api/types"
 	"nexorade/dotty-go/db"
+	"nexorade/dotty-go/internal/gitpal"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	fiber_logger "github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/rs/zerolog/log"
+	"github.com/sosedoff/gitkit"
+
 	// "nexorade/dotty-go/internal/hedwig"
 	"os"
 )
@@ -33,6 +39,22 @@ func main() {
 		log.Fatal().Str("service", "DATABASE_PING").Msg(pingErr.Error())
 	}
 
+	// Configure git server
+	gitDir := os.Getenv("REPO_BASE_PATH")
+	hooks := &gitkit.HookScripts{}
+	service := gitkit.New(gitkit.Config{
+		Dir:        gitDir,
+		AutoCreate: true,
+		AutoHooks:  true,
+		Hooks:      hooks,
+		Auth:       true,
+	})
+
+	if gitErr := service.Setup(); gitErr != nil {
+		log.Fatal().Str("service", "GIT_SERVICE_SETUP").Msg(gitErr.Error())
+	}
+
+	service.AuthFunc = gitpal.Authorise
 	// hedwig.InitialiseOrchestrator()
 	// defer hedwig.CloseOrchastrator()
 	app := fiber.New(fiber.Config{
@@ -60,6 +82,7 @@ func main() {
 	// CORS Middleware
 	app.Use(cors.New())
 
+	app.All("/dotsource/*", adaptor.HTTPHandler(service)).Name("dotsource")
 	// V1 API Routes
 	v1 := app.Group("/api/v1")
 	v1.Route("/auth", func(router fiber.Router) {
@@ -74,5 +97,9 @@ func main() {
 	v1.Route("/user", func(router fiber.Router) {
 		router.Patch("/update-password", middleware.Authorise, user_handler.UpdatePassword).Name("update-password")
 	}, "user.")
+
+	v1.Route("/repo", func(router fiber.Router) {
+		router.Post("/create", middleware.Authorise, repo_handler.CreateRepository).Name("create-repository")
+	}, "repo.")
 	logger.Fatal(app.Listen(port))
 }

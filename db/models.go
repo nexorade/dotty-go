@@ -21,23 +21,15 @@ type AppUser struct {
 }
 
 type Dotsource struct {
-	ID              int32
-	UserID          int32
-	DotsourcePathID int32
-	Name            string
-	Private         bool
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
-	DeletedAt       pgtype.Timestamptz
-}
-
-type DotsourcePath struct {
 	ID           int32
-	BasePath     string
-	RelativePath pgtype.Text
+	UserID       int32
+	Name         string
+	Private      bool
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
 	DeletedAt    pgtype.Timestamptz
+	BasePath     string
+	RelativePath string
 }
 
 type PasswordResetToken struct {

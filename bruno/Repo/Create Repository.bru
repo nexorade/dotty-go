@@ -1,0 +1,19 @@
+meta {
+  name: Create Repository
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://127.0.0.1:8080/api/v1/repo/create
+  body: formUrlEncoded
+  auth: none
+}
+
+headers {
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySUQiOiIzNiIsIlVzZXJuYW1lIjoiY2hpcmFnY2hhbiIsIkVtYWlsIjoiY2NoaXJhZzg1QGdtYWlsLmNvbSIsImV4cCI6MTcyOTgzODcyNCwiaWF0IjoxNzI5ODM4MTI0fQ.Hj1xM8VThBrNJKTFwhPZ85d7DkX6wEh7k3C4PekAnJQ
+}
+
+body:form-urlencoded {
+  name: whatever
+}

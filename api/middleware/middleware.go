@@ -23,7 +23,6 @@ func Authorise(ctx *fiber.Ctx) error {
 	}
 
 	token := header.AccessToken
-
 	claims, valid := my_jwt.Validate(token)
 	if !valid {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
