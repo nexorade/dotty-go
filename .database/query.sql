@@ -48,3 +48,6 @@ UPDATE password_reset_token SET expired=TRUE WHERE id=$1;
 
 -- name: DotsourceExists :one
 SELECT 1 FROM dotsource WHERE user_id=$1 AND name=$2; 
+
+-- name: CreateDotsource :one
+INSERT INTO dotsource (user_id, base_path, relative_path, name, private) VALUES ($1, $2, $3, $4, $5) RETURNING 1;

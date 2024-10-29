@@ -28,6 +28,31 @@ func (q *Queries) CreateAppUser(ctx context.Context, arg CreateAppUserParams) (i
 	return column_1, err
 }
 
+const createDotsource = `-- name: CreateDotsource :one
+INSERT INTO dotsource (user_id, base_path, relative_path, name, private) VALUES ($1, $2, $3, $4, $5) RETURNING 1
+`
+
+type CreateDotsourceParams struct {
+	UserID       int32
+	BasePath     string
+	RelativePath string
+	Name         string
+	Private      bool
+}
+
+func (q *Queries) CreateDotsource(ctx context.Context, arg CreateDotsourceParams) (int32, error) {
+	row := q.db.QueryRow(ctx, createDotsource,
+		arg.UserID,
+		arg.BasePath,
+		arg.RelativePath,
+		arg.Name,
+		arg.Private,
+	)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createPasswordResetToken = `-- name: CreatePasswordResetToken :one
 INSERT INTO password_reset_token (user_id, token, user_ip, expires_at) VALUES ($1,$2,$3,$4) RETURNING id, user_id, token, user_ip, expired, expires_at, created_at, updated_at, deleted_at
 `

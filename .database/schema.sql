@@ -37,29 +37,18 @@ CREATE TABLE preferences (
     FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 );
 
--- Create "path" table
-CREATE TABLE dotsource_path (
-    id SERIAL PRIMARY KEY,
-    base_path VARCHAR(255) NOT NULL DEFAULT '/repository_storage',
-    relative_path VARCHAR(255) DEFAULT '',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMPTZ DEFAULT NULL
-);
-
-
 -- Create "dotsource" table
 CREATE TABLE dotsource (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
-    dotsource_path_id INTEGER NOT NULL,
+	base_path VARCHAR(256) NOT NULL,
+	relative_path VARCHAR(256) NOT NULL,
     name VARCHAR(255) NOT NULL,
     private BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ DEFAULT NULL,
-    FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE,
-    FOREIGN KEY (dotsource_path_id) REFERENCES dotsource_path(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 );
 
 -- Create "password_reset_token" table
